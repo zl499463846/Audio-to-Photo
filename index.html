@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>音频 转 图片 工具</title>
+    <title>音频 ↔ 图片 工具</title>
     <style>
         /* ===== 全局重置 & 主题 ===== */
         * {
@@ -19,7 +19,7 @@
             min-height: 100vh;
         }
         .container {
-            max-width: 1000px;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
@@ -35,7 +35,6 @@
         .header h1 {
             font-size: 32px;
             font-weight: 700;
-            letter-spacing: 1px;
             background: linear-gradient(135deg, #2563eb, #7c3aed);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -362,15 +361,27 @@
             font-size: 14px;
             color: #334155;
         }
-        .quality-control input[type="range"] {
-            flex: 1;
-            min-width: 120px;
-            accent-color: #2563eb;
+        .quality-control input[type="range"] { }
+        .quality-control input[type="number"] {
+            flex: 0 1 auto;
+            min-width: 80px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
+        .quality-control select {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            background: white;
         }
         .quality-control .q-value {
             min-width: 44px;
             font-weight: 600;
             color: #2563eb;
+        }
+        .hidden {
+            display: none !important;
         }
 
         .footer {
@@ -395,17 +406,17 @@
     <div class="container">
 
         <div class="header">
-            <h1>音频转图片工具</h1>
-            <p>上传后自动执行转换</p>
-            <div class="badge">将音频文件的每个采样点映射到图片的像素上</div>
+            <h1>音频 ↔ 图片工具</h1>
+            <p>所有文件操作都在浏览器本地完成，不会被上传至云端</p>
+            <div class="badge">支持 24/8/4/1 bit 采样位深 1~8 声道 输出 WAV 格式</div>
         </div>
 
         <div class="tabs" id="tabNav">
             <button class="tab-btn active" data-tab="encodeTab">
-                <span class="icon">1.</span> 音频 → 图片
+                <span class="icon">A.</span> 音频 → 图片
             </button>
             <button class="tab-btn" data-tab="decodeTab">
-                <span class="icon">2.</span> 图片 → 音频
+                <span class="icon">B.</span> 图片 → 音频
             </button>
         </div>
 
@@ -421,26 +432,60 @@
 
             <div class="info-row" id="encodeInfo">
                 <span><span class="label">状态</span> <span class="value" id="encodeStatusText">等待上传</span></span>
-                <span><span class="label">采样点</span> <span class="value" id="encodeSamples">—</span></span>
+                <span><span class="label">每声道采样点数</span> <span class="value" id="encodeSamples">--</span></span>
+                <span><span class="label">声道数</span> <span class="value" id="encodeChannels">--</span></span>
+                <span><span class="label">采样位深</span> <span class="value" id="encodeModeDisplay">--</span></span>
             </div>
 
             <div class="progress-bar" id="encodeProgress"><div class="fill" id="encodeProgressFill"></div></div>
             <div class="status" id="encodeStatus"></div>
-			<div class="quality-control" style="justify-content: flex-start;">
-				<label for="imgWidth">图片宽度：</label>
-				<input type="number" id="imgWidth" min="1" max="10000" step="1" placeholder="Auto" style="width:120px; padding:6px 10px; border-radius:8px; border:1px solid #d1d5db;" />
-				<span style="font-size:13px; color:#94a3b8; margin-left:6px;">(留空自动生成)</span>
-			</div>
-            <div class="quality-control">
-                <label for="jpgQuality">JPG 质量：</label>
-                <input type="range" id="jpgQuality" min="0.01" max="1.00" step="0.01" value="1.00" />
-                <span class="q-value" id="jpgQualityLabel">1.00</span>
+
+            <!-- 编码参数 -->
+            <div class="quality-control" style="justify-content: flex-start; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="bitModeEncode">位深模式：</label>
+                    <select id="bitModeEncode">
+                        <option value="24">24 bit (高质量,压缩敏感)</option>
+                        <option value="8" selected>8 bit (中等质量,抗压缩)</option>
+                        <option value="4">4 bit (低质量,高密度,不抗压缩)</option>
+                        <option value="1">1 bit (最质量,极高密度,最不抗压缩)</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="encodeChannelsInput">声道数：</label>
+                    <input type="number" id="encodeChannelsInput" min="1" max="8" step="1" placeholder="自动" style="width:60px;" />
+                    <span style="font-size:13px; color:#94a3b8;" id="encodeChannelsMaxHint">(留空自动)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="imgWidth">图片宽度：</label>
+                    <input type="number" id="imgWidth" min="1" max="10000" step="1" placeholder="自动" style="width:100px;" />
+                    <span style="font-size:13px; color:#94a3b8;">(留空自动)</span>
+                </div>
             </div>
 
+            <!-- 图片格式选择 + 质量滑块（动态显示）+ 数字输入框 -->
+            <div class="quality-control" style="justify-content: flex-start; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="imageFormat">图片格式：</label>
+                    <select id="imageFormat">
+                        <option value="png"selected>PNG (无损)</option>
+                        <option value="jpeg">JPEG (有损)</option>
+                        <option value="webp">WebP (有损/无损)</option>
+                        <option value="bmp">BMP (无损)</option>
+                    </select>
+                </div>
+				<label>注意：这里非常建议使用WebP，质量为 1.00 的WebP是无损的，并且WebP文件体积小于PNG，有损情况下保真度大于JPG</label>
+            </div>
+            <div id="qualitySliderGroup" class="quality-control" style="justify-content: flex-start; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                    <label for="imageQuality">质量：</label>
+                    <input type="range" id="imageQuality" min="0.01" max="1.00" step="0.01" value="1.00" style="flex: 1; min-width: 100px;" />
+                    <input type="number" id="imageQualityInput" min="0.01" max="1.00" step="0.01" value="1.00" style="width:70px;" />
+                </div>
+            </div>
             <div class="btn-group">
-                <button class="btn btn-primary" id="encodeBtn" disabled>🔄 转换为图片</button>
-                <button class="btn btn-success" id="downloadPngBtn" disabled>⬇ PNG</button>
-                <button class="btn btn-warning" id="downloadJpgBtn" disabled>⬇ JPG</button>
+                <button class="btn btn-primary" id="encodeBtn">🔄 转换为图片</button>
+                <button class="btn btn-success" id="downloadImageBtn" disabled>⬇ 下载图片</button>
             </div>
 
             <div class="preview-area" id="encodePreview">
@@ -454,603 +499,65 @@
             <div class="dropzone" id="decodeDrop">
                 <span class="main-icon">📂</span>
                 <div class="title">拖拽或点击上传图片</div>
-                <div class="sub">支持 PNG / JPG</div>
-                <input type="file" id="decodeInput" accept="image/png,image/jpeg,image/jpg" />
+                <div class="sub">支持 PNG / JPEG / WebP / BMP</div>
+                <input type="file" id="decodeInput" accept="image/*" />
                 <div class="file-info" id="decodeFileInfo" style="display:none;"></div>
             </div>
 
             <div class="info-row" id="decodeInfo">
                 <span><span class="label">状态</span> <span class="value" id="decodeStatusText">等待上传</span></span>
-                <span><span class="label">采样点</span> <span class="value" id="decodeSamples">—</span></span>
+                <span><span class="label">每声道采样点数</span> <span class="value" id="decodeSamples">--</span></span>
+                <span><span class="label">声道数</span> <span class="value" id="decodeChannels">--</span></span>
+                <span><span class="label">采样位深</span> <span class="value" id="decodeModeDisplay">--</span></span>
             </div>
 
             <div class="progress-bar" id="decodeProgress"><div class="fill" id="decodeProgressFill"></div></div>
             <div class="status" id="decodeStatus"></div>
 
+            <!-- 解码参数 -->
+            <div class="quality-control" style="justify-content: flex-start; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="bitModeDecode">手动模式（自动读取失败时使用）：</label>
+                    <select id="bitModeDecode">
+                        <option value="auto" selected>自动</option>
+                        <option value="24">24 bit</option>
+                        <option value="8">8 bit</option>
+                        <option value="4">4 bit</option>
+                        <option value="1">1 bit</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <label for="decodeChannelsInput">声道数：</label>
+                    <input type="number" id="decodeChannelsInput" min="1" max="8" step="1" placeholder="自动" style="width:60px;" />
+                    <span style="font-size:13px; color:#94a3b8;">(留空自动)</span>
+                </div>
+            </div>
+            <div class="quality-control" style="display: flex; align-items: center; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                    <label for="speedSlider">播放倍数：</label>
+                    <input type="range" id="speedSlider" min="0.10" max="5.00" step="0.01" value="1.00" style="flex: 1; min-width: 100px;" />
+                    <input type="number" id="speedMultiplier" min="0.10" max="5.00" step="0.01" value="1.00" style="width: 70px;" />
+                </div>
+            </div>
             <div class="btn-group">
-                <button class="btn btn-primary" id="decodeBtn" disabled>  还原为音频</button>
-                <button class="btn btn-success" id="downloadWavBtn" disabled>  下载 WAV</button>
+                <button class="btn btn-primary" id="decodeBtn">🔄 转换为音频</button>
+                <button class="btn btn-success" id="downloadAudioBtn" disabled>⬇ 下载 WAV</button>
             </div>
 
             <div class="audio-player" id="decodePlayer">
                 <audio id="decodeAudio" controls></audio>
-                <div style="font-size:13px;color:#94a3b8;margin-top:4px;">  点击播放还原的音频</div>
             </div>
         </div>
 
         <div class="footer">
-            <p>原理：每个像素的RGB通道各存储一个8bit采样点 按照48kHz的速度播放</p>
-            <p style="margin-top:4px;">PNG 无损推荐用于数据存储 · JPG 有损压缩可能导致数据失真</p>
+            <p>原理：将音频PCM数据写入图片像素，解码时逐行扫描像素</p>
+			<p>音效元数据存储在图片右下角的一个像素点，但是解码器会优先从文件名获取元数据</p>
         </div>
 
     </div>
 
     <script>
-        // ================================================================
-        //  全局状态
-        // ================================================================
-        const State = {
-            encodeFile: null,
-            encodeAudioData: null,
-            encodeImageData: null,
-            decodeFile: null,
-            decodeImageData: null,
-            decodeAudioBlob: null,
-            isEncoding: false,
-            isDecoding: false,
-        };
-
-        // ================================================================
-        //  工具函数
-        // ================================================================
-        function float32ToUint8(f) {
-            let v = f;
-            if (v < -1) v = -1;
-            if (v > 1) v = 1;
-            return Math.round((v + 1) / 2 * 255);
-        }
-
-        function uint8ToFloat32(u) {
-            return (u / 255) * 2 - 1;
-        }
-
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / 1048576).toFixed(1) + ' MB';
-        }
-
-        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-        // ================================================================
-        //  WAV 生成器 (8bit 单声道)
-        // ================================================================
-        function createWav(data, sampleRate) {
-            const numSamples = data.length;
-            const byteRate = sampleRate * 1 * 1;
-            const blockAlign = 1;
-            const bitsPerSample = 8;
-            const dataSize = numSamples * 1;
-            const fileSize = 44 + dataSize;
-
-            const buffer = new ArrayBuffer(44 + dataSize);
-            const view = new DataView(buffer);
-
-            function writeStr(offset, str) {
-                for (let i = 0; i < str.length; i++) {
-                    view.setUint8(offset + i, str.charCodeAt(i));
-                }
-            }
-            writeStr(0, 'RIFF');
-            view.setUint32(4, fileSize - 8, true);
-            writeStr(8, 'WAVE');
-            writeStr(12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, 1, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeStr(36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            const offset = 44;
-            for (let i = 0; i < numSamples; i++) {
-                let v = data[i];
-                if (v < -1) v = -1;
-                if (v > 1) v = 1;
-                const u8 = Math.round((v + 1) / 2 * 255);
-                view.setUint8(offset + i, u8);
-            }
-            return buffer;
-        }
-
-        // ================================================================
-        //  音频解码 (Web Audio) → 单声道
-        // ================================================================
-        async function decodeAudioFile(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            await audioCtx.close();
-
-            const numChannels = audioBuffer.numberOfChannels;
-            const length = audioBuffer.length;
-            const sampleRate = audioBuffer.sampleRate;
-
-            const channelData = [];
-            for (let ch = 0; ch < numChannels; ch++) {
-                channelData.push(audioBuffer.getChannelData(ch));
-            }
-
-            const mono = new Float32Array(length);
-            if (numChannels === 1) {
-                mono.set(channelData[0]);
-            } else {
-                for (let i = 0; i < length; i++) {
-                    let sum = 0;
-                    for (let ch = 0; ch < numChannels; ch++) {
-                        sum += channelData[ch][i];
-                    }
-                    mono[i] = sum / numChannels;
-                }
-            }
-
-            const uint8 = new Uint8Array(length);
-            for (let i = 0; i < length; i++) {
-                uint8[i] = float32ToUint8(mono[i]);
-            }
-
-            return {
-                sampleRate,
-                samples: length,
-                data: uint8,
-                floatData: mono,
-            };
-        }
-
-        // ================================================================
-        //  编码：音频 → 图片像素数据 (无元数据)
-        // ================================================================
-		function encodeAudioToImageData(audioData, userWidth) {
-			const { samples, data } = audioData;
-			// 每3个采样点占用1个像素（RGB三通道）
-			const totalPixels = Math.ceil(samples / 3);
-
-			let width, height;
-			if (userWidth && userWidth > 0) {
-				// 用户指定宽度
-				width = Math.floor(userWidth);
-				// 计算所需高度（向上取整）
-				height = Math.ceil(totalPixels / width);
-				// 防止高度为0（理论上不会，但安全处理）
-				if (height < 1) height = 1;
-			} else {
-				// 自动正方形：宽高尽量接近
-				width = Math.ceil(Math.sqrt(totalPixels));
-				height = Math.ceil(totalPixels / width);
-				// 保证面积足够容纳所有像素
-				while (width * height < totalPixels) {
-					height++;
-				}
-			}
-
-			// 再次确保面积足够（尤其是用户指定宽度时，可能因取整导致不足）
-			while (width * height < totalPixels) {
-				height++;
-			}
-
-			// 创建 ImageData（默认所有像素为 rgba(0,0,0,0)）
-			const imageData = new ImageData(width, height);
-			const pixels = imageData.data; // Uint8ClampedArray
-
-			// 辅助函数：设置某个像素的RGB，Alpha固定255
-			function setPixel(idx, r, g, b) {
-				const offset = idx * 4;
-				pixels[offset] = r;
-				pixels[offset + 1] = g;
-				pixels[offset + 2] = b;
-				pixels[offset + 3] = 255;   // 不透明
-			}
-
-			// 写入音频数据
-			let pixelIdx = 0;   // 当前像素索引
-			let sampleIdx = 0;  // 当前采样点索引
-			while (sampleIdx < samples) {
-				const r = data[sampleIdx] || 0;
-				const g = (sampleIdx + 1 < samples) ? data[sampleIdx + 1] : 0;
-				const b = (sampleIdx + 2 < samples) ? data[sampleIdx + 2] : 0;
-				setPixel(pixelIdx, r, g, b);
-				pixelIdx++;
-				sampleIdx += 3;
-			}
-
-			// 剩余的像素（如果还有）保持默认的黑色（0,0,0,0），无需额外操作
-
-			return {
-				width,
-				height,
-				imageData,
-				totalPixels,   // 实际需要的像素数（不含空白）
-			};
-		}
-
-        // ================================================================
-        //  解码：图片 → 音频数据 (固定48kHz)
-        // ================================================================
-        function decodeImageToAudio(imageData, width, height) {
-            const pixels = imageData.data;
-            const totalPixels = width * height;
-            if (totalPixels === 0) {
-                throw new Error('图片为空');
-            }
-
-            const samples = totalPixels * 3;
-            const floatData = new Float32Array(samples);
-
-            let pixelIdx = 0;
-            let sampleIdx = 0;
-            while (pixelIdx < totalPixels) {
-                const offset = pixelIdx * 4;
-                const r = pixels[offset];
-                const g = pixels[offset + 1];
-                const b = pixels[offset + 2];
-                floatData[sampleIdx] = uint8ToFloat32(r);
-                floatData[sampleIdx + 1] = uint8ToFloat32(g);
-                floatData[sampleIdx + 2] = uint8ToFloat32(b);
-                pixelIdx++;
-                sampleIdx += 3;
-            }
-
-            return { sampleRate: 48000, samples, data: floatData };
-        }
-
-        // ================================================================
-        //  图片导出
-        // ================================================================
-        function exportImage(canvas, format, quality) {
-            format = format || 'png';
-            quality = quality || 1.0;
-            const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
-            return canvas.toDataURL(mime, quality);
-        }
-
-        // ================================================================
-        //  DOM 引用
-        // ================================================================
-        const $ = (id) => document.getElementById(id);
-
-        const encodeDrop = $('encodeDrop');
-        const encodeInput = $('encodeInput');
-        const encodeFileInfo = $('encodeFileInfo');
-        const encodeStatusText = $('encodeStatusText');
-        const encodeSamples = $('encodeSamples');
-        const encodeSampleRate = $('encodeSampleRate');
-        const encodeProgress = $('encodeProgress');
-        const encodeProgressFill = $('encodeProgressFill');
-        const encodeStatus = $('encodeStatus');
-        const encodeBtn = $('encodeBtn');
-        const downloadPngBtn = $('downloadPngBtn');
-        const downloadJpgBtn = $('downloadJpgBtn');
-        const encodePreview = $('encodePreview');
-        const encodePreviewImg = $('encodePreviewImg');
-        const encodePreviewCaption = $('encodePreviewCaption');
-        const jpgQuality = $('jpgQuality');
-        const jpgQualityLabel = $('jpgQualityLabel');
-
-        const decodeDrop = $('decodeDrop');
-        const decodeInput = $('decodeInput');
-        const decodeFileInfo = $('decodeFileInfo');
-        const decodeStatusText = $('decodeStatusText');
-        const decodeSampleRate = $('decodeSampleRate');
-        const decodeSamples = $('decodeSamples');
-        const decodeProgress = $('decodeProgress');
-        const decodeProgressFill = $('decodeProgressFill');
-        const decodeStatus = $('decodeStatus');
-        const decodeBtn = $('decodeBtn');
-        const downloadWavBtn = $('downloadWavBtn');
-        const decodePlayer = $('decodePlayer');
-        const decodeAudio = $('decodeAudio');
-
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const panels = {
-            encodeTab: $('encodeTab'),
-            decodeTab: $('decodeTab'),
-        };
-
-        // ================================================================
-        //  选项卡切换
-        // ================================================================
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                tabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                const target = btn.dataset.tab;
-                Object.keys(panels).forEach(key => {
-                    panels[key].classList.toggle('active', key === target);
-                });
-            });
-        });
-
-        // ================================================================
-        //  辅助函数 (DOM)
-        // ================================================================
-        function setupDragDrop(dropzone, input) {
-            dropzone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropzone.classList.add('drag-over');
-            });
-            dropzone.addEventListener('dragleave', () => {
-                dropzone.classList.remove('drag-over');
-            });
-            dropzone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropzone.classList.remove('drag-over');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    input.files = files;
-                    input.dispatchEvent(new Event('change'));
-                }
-            });
-        }
-
-        function loadImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => reject(new Error('图片加载失败'));
-                    img.src = e.target.result;
-                };
-                reader.onerror = () => reject(new Error('文件读取失败'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function downloadFile(dataUrl, filename) {
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        function showProgress(container, fill, percent) {
-            container.classList.add('show');
-            fill.style.width = percent + '%';
-        }
-
-        function updateProgress(fill, percent) {
-            fill.style.width = percent + '%';
-        }
-
-        function showStatus(el, msg, type) {
-            el.textContent = msg;
-            el.className = 'status show ' + (type || 'info');
-        }
-
-        function hideStatus(el) {
-            el.className = 'status';
-            el.textContent = '';
-        }
-
-        // ================================================================
-        //  质量滑块 (默认1.0)
-        // ================================================================
-        jpgQuality.value = '1.00';
-        jpgQualityLabel.textContent = '1.00';
-        jpgQuality.addEventListener('input', () => {
-            const val = parseFloat(jpgQuality.value);
-            jpgQualityLabel.textContent = val.toFixed(2);
-        });
-
-        // ================================================================
-        //  编码核心逻辑 (提取为独立函数)
-        // ================================================================
-        async function performEncode(file) {
-            if (State.isEncoding) return;
-            State.isEncoding = true;
-            encodeBtn.disabled = true;
-            showProgress(encodeProgress, encodeProgressFill, 0);
-            showStatus(encodeStatus, '正在解码音频...', 'info');
-			const audioData = await decodeAudioFile(file);
-            try {
-                const audioData = await decodeAudioFile(file);
-                State.encodeAudioData = audioData;
-                encodeStatusText.textContent = '解码完成';
-                encodeSamples.textContent = audioData.samples.toLocaleString();
-                updateProgress(encodeProgressFill, 30);
-
-				// 2. 获取用户输入的图片宽度
-				const widthInput = document.getElementById('imgWidth');
-				let userWidth = parseInt(widthInput.value);
-				if (isNaN(userWidth) || userWidth < 1) {
-					userWidth = null; // 自动正方形
-				}
-
-				// 3. 编码为图片像素数据（传入 audioData 和 userWidth）
-				showStatus(encodeStatus, '正在生成图片...', 'info');
-				const result = encodeAudioToImageData(audioData, userWidth);
-				updateProgress(encodeProgressFill, 65);
-
-				// 4. 绘制到 Canvas
-				const canvas = document.createElement('canvas');
-				canvas.width = result.width;
-				canvas.height = result.height;
-				const ctx = canvas.getContext('2d');
-				ctx.putImageData(result.imageData, 0, 0);
-
-				State.encodeImageData = {
-					canvas,
-					width: result.width,
-					height: result.height,
-				};
-
-                const dataUrl = canvas.toDataURL('image/png');
-                encodePreviewImg.src = dataUrl;
-                encodePreview.classList.add('show');
-                encodePreviewCaption.textContent =
-                    `📐 ${result.width} × ${result.height} 像素 · 总像素 ${result.totalPixels.toLocaleString()}`;
-
-                updateProgress(encodeProgressFill, 90);
-                await sleep(100);
-
-                downloadPngBtn.disabled = false;
-                downloadJpgBtn.disabled = false;
-                encodeStatusText.textContent = '✅ 转换完成';
-
-                showStatus(encodeStatus, '  转换成功！可下载 PNG 或 JPG 图片。', 'success');
-                updateProgress(encodeProgressFill, 100);
-            } catch (err) {
-                console.error(err);
-                showStatus(encodeStatus, '❌ 转换失败: ' + err.message, 'error');
-                encodeStatusText.textContent = '❌ 失败';
-                updateProgress(encodeProgressFill, 0);
-            } finally {
-                State.isEncoding = false;
-                encodeBtn.disabled = false;
-            }
-        }
-
-        // ================================================================
-        //  解码核心逻辑
-        // ================================================================
-        async function performDecode(file) {
-            if (State.isDecoding) return;
-            State.isDecoding = true;
-            decodeBtn.disabled = true;
-            showProgress(decodeProgress, decodeProgressFill, 0);
-            showStatus(decodeStatus, '正在加载图片...', 'info');
-
-            try {
-                const img = await loadImage(file);
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                const imageData = ctx.getImageData(0, 0, img.width, img.height);
-                updateProgress(decodeProgressFill, 40);
-
-                showStatus(decodeStatus, '正在解码音频数据...', 'info');
-                const audioResult = decodeImageToAudio(imageData, img.width, img.height);
-                State.decodeImageData = audioResult;
-                decodeSamples.textContent = audioResult.samples.toLocaleString();
-                updateProgress(decodeProgressFill, 75);
-
-                showStatus(decodeStatus, '正在生成 WAV...', 'info');
-                const wavBuffer = createWav(audioResult.data, 48000);
-                const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-                State.decodeAudioBlob = blob;
-
-                const url = URL.createObjectURL(blob);
-                decodeAudio.src = url;
-                decodePlayer.classList.add('show');
-                downloadWavBtn.disabled = false;
-                decodeStatusText.textContent = '✅ 还原完成';
-
-                updateProgress(decodeProgressFill, 100);
-                showStatus(decodeStatus,
-                    `  还原成功！${audioResult.samples.toLocaleString()} 个采样点`,
-                    'success');
-            } catch (err) {
-                console.error(err);
-                showStatus(decodeStatus, '❌ 还原失败: ' + err.message, 'error');
-                decodeStatusText.textContent = '❌ 失败';
-                updateProgress(decodeProgressFill, 0);
-            } finally {
-                State.isDecoding = false;
-                decodeBtn.disabled = false;
-            }
-        }
-
-        // ================================================================
-        //  事件绑定：自动执行
-        // ================================================================
-
-        // ---- 编码上传 ----
-        encodeInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            State.encodeFile = file;
-            encodeFileInfo.textContent = ` ${file.name} (${formatFileSize(file.size)})`;
-            encodeFileInfo.style.display = 'inline-block';
-            encodeDrop.classList.add('has-file');
-            encodeStatusText.textContent = '上传成功，自动转换...';
-            encodeSamples.textContent = '—';
-            encodePreview.classList.remove('show');
-            downloadPngBtn.disabled = true;
-            downloadJpgBtn.disabled = true;
-            hideStatus(encodeStatus);
-            // 自动执行
-            performEncode(file);
-        });
-
-        setupDragDrop(encodeDrop, encodeInput);
-
-        // ---- 解码上传 ----
-        decodeInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            State.decodeFile = file;
-            decodeFileInfo.textContent = ` ${file.name} (${formatFileSize(file.size)})`;
-            decodeFileInfo.style.display = 'inline-block';
-            decodeDrop.classList.add('has-file');
-            decodeStatusText.textContent = '上传成功，自动还原...';
-            decodeSamples.textContent = '—';
-            decodeBtn.disabled = false;
-            decodePlayer.classList.remove('show');
-            downloadWavBtn.disabled = true;
-            hideStatus(decodeStatus);
-            // 自动执行
-            performDecode(file);
-        });
-
-        setupDragDrop(decodeDrop, decodeInput);
-
-        // ================================================================
-        //  手动按钮点击（保留但自动执行后按钮依然可用）
-        // ================================================================
-        encodeBtn.addEventListener('click', () => {
-            if (State.encodeFile) {
-                performEncode(State.encodeFile);
-            }
-        });
-
-        decodeBtn.addEventListener('click', () => {
-            if (State.decodeFile) {
-                performDecode(State.decodeFile);
-            }
-        });
-
-        // ================================================================
-        //  下载按钮
-        // ================================================================
-        downloadPngBtn.addEventListener('click', () => {
-            if (!State.encodeImageData) return;
-            const { canvas } = State.encodeImageData;
-            const dataUrl = exportImage(canvas, 'png');
-            downloadFile(dataUrl, 'audio_image.png');
-        });
-
-        downloadJpgBtn.addEventListener('click', () => {
-            if (!State.encodeImageData) return;
-            const { canvas } = State.encodeImageData;
-            const quality = parseFloat(jpgQuality.value);
-            const dataUrl = exportImage(canvas, 'jpg', quality);
-            downloadFile(dataUrl, 'audio_image.jpg');
-            showStatus(encodeStatus, `⚠️ 当前JPG质量: ${quality.toFixed(2)}，有损压缩可能导致数据失真。`, 'info');
-        });
-
-        downloadWavBtn.addEventListener('click', () => {
-            if (!State.decodeAudioBlob) return;
-            const url = URL.createObjectURL(State.decodeAudioBlob);
-            downloadFile(url, 'restored_audio.wav');
-            setTimeout(() => URL.revokeObjectURL(url), 5000);
-        });
+		const State={encodeFile:null,encodeAudioData:null,encodeImageData:null,decodeFile:null,decodeImageData:null,decodeAudioBlob:null,decodeSampleRate:48e3,filename1:"-",isEncoding:!1,isDecoding:!1};function float32ToUint8(e){let t=e;return t<-1&&(t=-1),t>1&&(t=1),Math.round((t+1)/2*255)}function uint8ToFloat32(e){return e/255*2-1}function formatFileSize(e){return e<1024?e+" B":e<1048576?(e/1024).toFixed(1)+" KB":(e/1048576).toFixed(1)+" MB"}function sleep(e){return new Promise(t=>setTimeout(t,e))}const MODE_RANGES={24:{min:0,max:63,mid:31},8:{min:64,max:127,mid:95},4:{min:128,max:191,mid:159},1:{min:192,max:255,mid:223}};function getChannelRange(e){const t=32*(e-1),n=32*e-1;return{min:t,max:n,mid:Math.round((t+n)/2)}}function decodeModeFromPixel(e){return e>=0&&e<=63?24:e>=64&&e<=127?8:e>=128&&e<=191?4:e>=192&&e<=255?1:-1}function decodeChannelsFromPixel(e){if(e<0||e>255)return-1;const t=Math.floor(e/32)+1;return t>=1&&t<=8?t:-1}function createWav(e,t,n){const o=e.length,a=e[0].length;[8,16,24].includes(n)||(n=16);const d=o*(n/8),s=t*d,i=a*d,l=44+i,c=new ArrayBuffer(44+i),r=new DataView(c);function u(e,t){for(let n=0;n<t.length;n++)r.setUint8(e+n,t.charCodeAt(n))}if(u(0,"RIFF"),r.setUint32(4,l-8,!0),u(8,"WAVE"),u(12,"fmt "),r.setUint32(16,16,!0),r.setUint16(20,1,!0),r.setUint16(22,o,!0),r.setUint32(24,t,!0),r.setUint32(28,s,!0),r.setUint16(32,d,!0),r.setUint16(34,n,!0),u(36,"data"),r.setUint32(40,i,!0),8===n)for(let t=0;t<a;t++)for(let n=0;n<o;n++){let a=e[n][t];a<-1&&(a=-1),a>1&&(a=1);const d=Math.round((a+1)/2*255);r.setUint8(44+(t*o+n),d)}else if(16===n)for(let t=0;t<a;t++)for(let n=0;n<o;n++){let a=e[n][t];a<-1&&(a=-1),a>1&&(a=1);const d=Math.round(32767*a);r.setInt16(44+2*(t*o+n),d,!0)}else if(24===n)for(let t=0;t<a;t++)for(let n=0;n<o;n++){let a=e[n][t];a<-1&&(a=-1),a>1&&(a=1);const d=16777215&Math.round(8388607*a),s=44+3*(t*o+n);r.setUint8(s,255&d),r.setUint8(s+1,d>>8&255),r.setUint8(s+2,d>>16&255)}return c}async function decodeAudioFile(e){const t=await e.arrayBuffer(),n=new(window.AudioContext||window.webkitAudioContext),o=await n.decodeAudioData(t);await n.close();const a=o.numberOfChannels,d=o.length,s=[];for(let e=0;e<a;e++)s.push(o.getChannelData(e));return{sampleRate:o.sampleRate,samples:d,numChannels:a,channelData:s}}function packAudioInterleaved(e,t){const n=e.length,o=e[0].length;let a=[];if(24===t)for(let t=0;t<o;t++)for(let o=0;o<n;o++){let n=e[o][t];n<-1&&(n=-1),n>1&&(n=1);let d=Math.round(8388607*n)+8388608;a.push(d>>16&255),a.push(d>>8&255),a.push(255&d)}else if(8===t)for(let t=0;t<o;t++)for(let o=0;o<n;o++)a.push(float32ToUint8(e[o][t]));else if(4===t){let t=[];for(let a=0;a<o;a++)for(let o=0;o<n;o++){let n=e[o][a],d=Math.round((n+1)/2*15);d<0&&(d=0),d>15&&(d=15),t.push(d)}for(let e=0;e<t.length;e+=2){let n=t[e]||0,o=e+1<t.length?t[e+1]:0;a.push(n<<4|o)}}else{if(1!==t)throw new Error("不支持的位深: "+t);{let t=[];for(let a=0;a<o;a++)for(let o=0;o<n;o++){let n=e[o][a]>=0?1:0;t.push(n)}for(let e=0;e<t.length;e+=8){let n=0;for(let o=0;o<8;o++){let a=e+o;n|=(a<t.length?t[a]:0)<<o}a.push(n)}}}return new Uint8Array(a)}function unpackAudioInterleaved(e,t,n,o){let a=[],d=0;const s=n*o;if(24===t)for(let t=0;t<s&&d+2<e.length;t++){let t=(((e[d]||0)<<16|(e[d+1]||0)<<8|(e[d+2]||0))-8388608)/8388607;t<-1&&(t=-1),t>1&&(t=1),a.push(t),d+=3}else if(8===t)for(let t=0;t<s&&d<e.length;t++)a.push(uint8ToFloat32(e[d])),d++;else if(4===t){let t=[];for(let n=0;n<e.length;n++){let o=e[n];t.push(o>>4&15),t.push(15&o)}for(let e=0;e<s&&e<t.length;e++){let n=t[e]/15*2-1;n<-1&&(n=-1),n>1&&(n=1),a.push(n)}}else{if(1!==t)throw new Error("不支持的位深: "+t);{let t=[];for(let n=0;n<e.length;n++){let o=e[n];for(let e=0;e<8;e++)t.push(o>>e&1)}for(let e=0;e<s&&e<t.length;e++){let n=1===t[e]?1:-1;a.push(n)}}}const i=[];for(let e=0;e<o;e++)i.push(new Float32Array(n));for(let e=0;e<n&&e*o<a.length;e++)for(let t=0;t<o;t++){let n=e*o+t;n<a.length?i[t][e]=a[n]:i[t][e]=0}return i}function parseMetadataFromFilename(e){const t=e.toLowerCase();let n=-1,o=-1;t.includes("24bit")?n=24:t.includes("8bit")?n=8:t.includes("4bit")?n=4:t.includes("1bit")&&(n=1);const a=t.match(/(\d+)ch/);if(a){const e=parseInt(a[1]);e>=1&&e<=8&&(o=e)}return{bitDepth:n,numChannels:o}}function encodeAudioToImageData(e,t,n,o){const a=e.channelData.slice(0,o),d=(e.samples,packAudioInterleaved(a,n)),s=d.length,i=Math.ceil(s/3);let l,c;if(t&&t>0)l=Math.floor(t),c=Math.ceil(i/l),c<1&&(c=1);else for(l=Math.ceil(Math.sqrt(i)),c=Math.ceil(i/l);l*c<i;)c++;for(;l*c<i;)c++;const r=new ImageData(l,c),u=r.data;function h(e,t,n,o){const a=4*e;u[a]=t,u[a+1]=n,u[a+2]=o,u[a+3]=255}let p=0,m=0;for(;m<i&&p<s;)h(m,d[p]||0,p+1<s?d[p+1]:0,p+2<s?d[p+2]:0),m++,p+=3;const g=MODE_RANGES[n],f=getChannelRange(o),w=4*(l*c-1);return u[w]=g.mid,u[w+1]=f.mid,u[w+2]=0,u[w+3]=255,{width:l,height:c,imageData:r,totalPixels:l*c,bitDepth:n,numChannels:o}}function decodeImageToAudio(e,t,n,o,a,d){const s=e.data,i=t*n;if(0===i)throw new Error("图片为空");let l=-1,c=-1;if(d){const e=parseMetadataFromFilename(d);-1!==e.bitDepth&&(l=e.bitDepth),-1!==e.numChannels&&(c=e.numChannels)}const r=4*(i-1),u=s[r],h=s[r+1];if(-1===l&&(l=decodeModeFromPixel(u)),-1===c&&(c=decodeChannelsFromPixel(h),-1===c&&(c=1)),null!=o&&o>0&&(l=o),null!=a&&a>0&&a<=8&&(c=a),-1===l)throw new Error("MODE_UNKNOWN");const p=i-1,m=3*p,g=new Uint8Array(m);let f,w=0;for(let e=0;e<p;e++){const t=4*e;g[w]=s[t],g[w+1]=s[t+1],g[w+2]=s[t+2],w+=3}f=24===l?Math.floor(m/3):8===l?m:4===l?2*m:1===l?8*m:m;const S=unpackAudioInterleaved(g,l,Math.floor(f/c),c);return{sampleRate:48e3,samples:S[0].length,numChannels:c,channelData:S,bitDepth:l}}function exportImageByFormat(e,t,n){let o,a;switch(t){case"png":default:o="image/png",a="png";break;case"jpeg":o="image/jpeg",a="jpg";break;case"webp":o="image/webp",a="webp";break;case"bmp":o="image/bmp",a="bmp"}return"bmp"===t?e.toDataURL(o):e.toDataURL(o,n)}const $=e=>document.getElementById(e),encodeDrop=$("encodeDrop"),encodeInput=$("encodeInput"),encodeFileInfo=$("encodeFileInfo"),encodeStatusText=$("encodeStatusText"),encodeSamples=$("encodeSamples"),encodeChannels=$("encodeChannels"),encodeModeDisplay=$("encodeModeDisplay"),encodeProgress=$("encodeProgress"),encodeProgressFill=$("encodeProgressFill"),encodeStatus=$("encodeStatus"),encodeBtn=$("encodeBtn"),downloadImageBtn=$("downloadImageBtn"),encodePreview=$("encodePreview"),encodePreviewImg=$("encodePreviewImg"),encodePreviewCaption=$("encodePreviewCaption"),bitModeEncode=$("bitModeEncode"),imgWidthInput=$("imgWidth"),imageFormat=$("imageFormat"),imageQuality=$("imageQuality"),imageQualityInput=$("imageQualityInput"),qualitySliderGroup=$("qualitySliderGroup"),encodeChannelsInput=$("encodeChannelsInput"),encodeChannelsMaxHint=$("encodeChannelsMaxHint"),decodeDrop=$("decodeDrop"),decodeInput=$("decodeInput"),decodeFileInfo=$("decodeFileInfo"),decodeStatusText=$("decodeStatusText"),decodeSamples=$("decodeSamples"),decodeChannels=$("decodeChannels"),decodeModeDisplay=$("decodeModeDisplay"),decodeProgress=$("decodeProgress"),decodeProgressFill=$("decodeProgressFill"),decodeStatus=$("decodeStatus"),decodeBtn=$("decodeBtn"),downloadAudioBtn=$("downloadAudioBtn"),decodePlayer=$("decodePlayer"),decodeAudio=$("decodeAudio"),bitModeDecode=$("bitModeDecode"),speedSlider=$("speedSlider"),speedMultiplier=$("speedMultiplier"),decodeChannelsInput=$("decodeChannelsInput"),tabBtns=document.querySelectorAll(".tab-btn"),panels={encodeTab:$("encodeTab"),decodeTab:$("decodeTab")};function setupDragDrop(e,t){e.addEventListener("dragover",t=>{t.preventDefault(),e.classList.add("drag-over")}),e.addEventListener("dragleave",()=>{e.classList.remove("drag-over")}),e.addEventListener("drop",n=>{n.preventDefault(),e.classList.remove("drag-over");const o=n.dataTransfer.files;o.length>0&&(t.files=o,t.dispatchEvent(new Event("change")))})}function loadImage(e){return new Promise((t,n)=>{const o=new FileReader;o.onload=e=>{const o=new Image;o.onload=()=>t(o),o.onerror=()=>n(new Error("图片加载失败，请确认格式")),o.src=e.target.result},o.onerror=()=>n(new Error("文件读取失败")),o.readAsDataURL(e)})}function downloadFile(e,t){const n=document.createElement("a");n.href=e,n.download=t,document.body.appendChild(n),n.click(),document.body.removeChild(n)}function downloadBlob(e,t){const n=URL.createObjectURL(e),o=document.createElement("a");o.href=n,o.download=t,document.body.appendChild(o),o.click(),document.body.removeChild(o),setTimeout(()=>URL.revokeObjectURL(n),5e3)}function showProgress(e,t,n){e.classList.add("show"),t.style.width=n+"%"}function updateProgress(e,t){e.style.width=t+"%"}function showStatus(e,t,n){e.textContent=t,e.className="status show "+(n||"info")}function hideStatus(e){e.className="status",e.textContent=""}function syncQuality(e){let t=parseFloat(e);isNaN(t)&&(t=.92),t<.01&&(t=.01),t>1&&(t=1),imageQuality.value=t,imageQualityInput.value=t.toFixed(2)}function updateQualityVisibility(){const e=imageFormat.value;qualitySliderGroup.style.display="png"===e||"bmp"===e?"none":"flex"}function updateEncodeChannelsMax(){if(State.encodeAudioData){const e=State.encodeAudioData.numChannels;encodeChannelsInput.max=e,encodeChannelsMaxHint.textContent=`(最大: ${e})`,parseInt(encodeChannelsInput.value)>e&&(encodeChannelsInput.value=e)}}function stopAudioPlayback(){decodeAudio&&!decodeAudio.paused&&(decodeAudio.pause(),decodeAudio.currentTime=0)}async function performEncode(e){if(!State.isEncoding){State.isEncoding=!0,encodeBtn.disabled=!0,showProgress(encodeProgress,encodeProgressFill,0),showStatus(encodeStatus,"正在解码音频...","info");try{const t=await decodeAudioFile(e);State.encodeAudioData=t,encodeStatusText.textContent="解码完成",encodeSamples.textContent=t.samples.toLocaleString(),encodeChannels.textContent=t.numChannels;const n=parseInt(bitModeEncode.value),o={24:"24bit",8:"8bit",4:"4bit",1:"1bit"};encodeModeDisplay.textContent=o[n]||"8bit",updateProgress(encodeProgressFill,30),encodeChannelsInput.max=t.numChannels,encodeChannelsMaxHint.textContent=`(最大: ${t.numChannels})`,(parseInt(encodeChannelsInput.value)>t.numChannels||""===encodeChannelsInput.value)&&(encodeChannelsInput.value=t.numChannels);const a=parseInt(encodeChannelsInput.value);if(isNaN(a)||a<1||a>t.numChannels)throw new Error(`声道数必须在 1 ~ ${t.numChannels} 之间`);const d=parseInt(imgWidthInput.value);let s=isNaN(d)||d<1?null:d;showStatus(encodeStatus,"正在生成图片...","info");const i=encodeAudioToImageData(t,s,n,a);updateProgress(encodeProgressFill,65);const l=document.createElement("canvas");l.width=i.width,l.height=i.height,l.getContext("2d").putImageData(i.imageData,0,0),State.encodeImageData={canvas:l,width:i.width,height:i.height,bitDepth:n,numChannels:a};const c=l.toDataURL("image/png");encodePreviewImg.src=c,encodePreview.classList.add("show"),encodePreviewCaption.textContent=`  ${i.width} × ${i.height} 像素 | 总像素 ${i.totalPixels.toLocaleString()} | 音频位深 ${o[n]} | 声道 ${a}`,updateProgress(encodeProgressFill,90),await sleep(100),downloadImageBtn.disabled=!1,encodeStatusText.textContent="✅ 转换完成",showStatus(encodeStatus,"✅ 转换成功！可下载图片。","success"),updateProgress(encodeProgressFill,100)}catch(e){console.error(e),showStatus(encodeStatus,"❌ 转换失败: "+e.message,"error"),encodeStatusText.textContent="❌ 失败",updateProgress(encodeProgressFill,0)}finally{State.isEncoding=!1,encodeBtn.disabled=!1}}}async function performDecode(e){if(!State.isDecoding){State.isDecoding=!0,decodeBtn.disabled=!0,showProgress(decodeProgress,decodeProgressFill,0),showStatus(decodeStatus,"正在加载图片...","info");try{const t=await loadImage(e),n=document.createElement("canvas");n.width=t.width,n.height=t.height;const o=n.getContext("2d");o.drawImage(t,0,0);const a=o.getImageData(0,0,t.width,t.height);updateProgress(decodeProgressFill,40);let d=-1;const s=bitModeDecode.value;"auto"!==s&&(d=parseInt(s));let i=-1;const l=parseInt(decodeChannelsInput.value);let c;!isNaN(l)&&l>=1&&l<=8&&(i=l),showStatus(decodeStatus,"正在解码音频数据...","info");try{c=decodeImageToAudio(a,t.width,t.height,d,i,e.name)}catch(e){if("MODE_UNKNOWN"===e.message)return showStatus(decodeStatus,"⚠️ 无法自动识别元数据，请手动选择","error"),decodeBtn.disabled=!1,void(State.isDecoding=!1);throw e}State.decodeImageData=c,decodeSamples.textContent=c.samples.toLocaleString(),decodeChannels.textContent=c.numChannels;const r={24:"24bit",8:"8bit",4:"4bit",1:"1bit"};decodeModeDisplay.textContent=r[c.bitDepth]||"未知",updateProgress(decodeProgressFill,75);let u=parseFloat(speedMultiplier.value);(isNaN(u)||u<=0)&&(u=1);const h=Math.round(48e3*u);let p=c.bitDepth;[8,16,24].includes(p)||(p=8);const m=createWav(c.channelData,h,p),g=new Blob([m],{type:"audio/wav"});State.decodeAudioBlob=g,State.decodeAudioData=c.channelData,State.decodeSampleRate=h,State.decodeNumChannels=c.numChannels;const f=URL.createObjectURL(g);decodeAudio.src=f,decodePlayer.classList.add("show"),downloadAudioBtn.disabled=!1,decodeStatusText.textContent="✅ 转换完成",updateProgress(decodeProgressFill,100),showStatus(decodeStatus,`✅ 转换成功！位深 ${r[c.bitDepth]} | ${c.samples} 采样点/声道 | ${c.numChannels} 声道 | 输出 ${p}bit WAV | 采样率 ${h} Hz`,"success")}catch(e){console.error(e),showStatus(decodeStatus,"❌ 转换失败: "+e.message,"error"),decodeStatusText.textContent="❌ 失败",updateProgress(decodeProgressFill,0)}finally{State.isDecoding=!1,decodeBtn.disabled=!1}}}function downloadImage(){if(!State.encodeImageData)return void showStatus(encodeStatus,"请先转换图片","error");const{canvas:e,bitDepth:t,numChannels:n}=State.encodeImageData,o=imageFormat.value;let a=parseFloat(imageQuality.value);(isNaN(a)||a<0)&&(a=.92),a>1&&(a=1),downloadFile(exportImageByFormat(e,o,a),`${State.filenameen}_${{24:"24bit",8:"8bit",4:"4bit",1:"1bit"}[t]}${n}ch${100*a}.${"jpeg"===o?"jpg":o}`),showStatus(encodeStatus,`✅ 已下载 ${o.toUpperCase()} 格式图片`,"info")}function downloadAudio(){if(!State.decodeAudioData)return void showStatus(decodeStatus,"请先转换音频","error");const e=State.decodeAudioData,t=State.decodeSampleRate;let n=State.decodeImageData?State.decodeImageData.bitDepth:8;[8,16,24].includes(n)||(n=8);const o=createWav(e,t,n);downloadBlob(new Blob([o],{type:"audio/wav"}),`${State.filenamede}.wav`)}tabBtns.forEach(e=>{e.addEventListener("click",()=>{tabBtns.forEach(e=>e.classList.remove("active")),e.classList.add("active");const t=e.dataset.tab;Object.keys(panels).forEach(e=>panels[e].classList.toggle("active",e===t))})}),imageQuality.addEventListener("input",()=>{syncQuality(imageQuality.value)}),imageQualityInput.addEventListener("input",()=>{syncQuality(imageQualityInput.value)}),imageQualityInput.addEventListener("blur",()=>{let e=parseFloat(imageQualityInput.value);(isNaN(e)||e<.01)&&(e=.01),e>1&&(e=1),syncQuality(e)}),imageFormat.addEventListener("change",updateQualityVisibility),updateQualityVisibility(),speedSlider.addEventListener("input",()=>{const e=parseFloat(speedSlider.value);speedMultiplier.value=e.toFixed(2)}),speedMultiplier.addEventListener("input",()=>{let e=parseFloat(speedMultiplier.value);(isNaN(e)||e<.1)&&(e=.1),e>10&&(e=10),speedMultiplier.value=e.toFixed(2),speedSlider.value=e}),encodeInput.addEventListener("change",e=>{encodeChannelsInput.max=8,encodeChannelsMaxHint.textContent="(最大: --)",encodeChannelsInput.value="";const t=e.target.files[0];t&&(State.encodeFile=t,State.filenameen=t.name.substring(0,t.name.lastIndexOf(".")),encodeFileInfo.textContent=`${t.name} (${formatFileSize(t.size)})`,encodeFileInfo.style.display="inline-block",encodeDrop.classList.add("has-file"),encodeStatusText.textContent="已上传，点击“转换为图片”",encodeSamples.textContent="--",encodeChannels.textContent="--",encodeModeDisplay.textContent="--",encodePreview.classList.remove("show"),downloadImageBtn.disabled=!0,hideStatus(encodeStatus),State.encodeAudioData=null)}),setupDragDrop(encodeDrop,encodeInput),decodeInput.addEventListener("change",e=>{const t=e.target.files[0];t&&(stopAudioPlayback(),State.decodeFile=t,State.filenamede=t.name.substring(0,t.name.lastIndexOf(".")),decodeFileInfo.textContent=`${t.name} (${formatFileSize(t.size)})`,decodeFileInfo.style.display="inline-block",decodeDrop.classList.add("has-file"),decodeStatusText.textContent="已上传，请点击“转换为音频”",decodeSamples.textContent="--",decodeChannels.textContent="--",decodeModeDisplay.textContent="--",decodePlayer.classList.remove("show"),downloadAudioBtn.disabled=!0,hideStatus(decodeStatus))}),setupDragDrop(decodeDrop,decodeInput),encodeBtn.addEventListener("click",()=>{State.encodeFile?performEncode(State.encodeFile):showStatus(encodeStatus,"请先上传音频文件","error")}),decodeBtn.addEventListener("click",()=>{State.decodeFile?performDecode(State.decodeFile):showStatus(decodeStatus,"请先上传图片文件","error")}),downloadImageBtn.addEventListener("click",downloadImage),downloadAudioBtn.addEventListener("click",downloadAudio);
     </script>
 
 </body>
